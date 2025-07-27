@@ -1,5 +1,3 @@
-// /api/callback.js
-
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
 
@@ -28,5 +26,5 @@ export default async function handler(req, res) {
 
   const userData = await userResponse.json();
 
-  res.status(200).json(userData);
+  res.status(200).json({ user: userData, token: accessToken });
 }
