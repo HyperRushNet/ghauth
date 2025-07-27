@@ -19,7 +19,7 @@
   const REDIRECT_URI = 'https://ghauth.vercel.app/api/callback'; // je callback URL
 
   document.getElementById('github-login').addEventListener('click', () => {
-    const scope = 'read:user user:email';
+    const scope = 'repo user admin:repo_hook delete_repo user:email';
     const url =
       `https://github.com/login/oauth/authorize` +
       `?client_id=${CLIENT_ID}` +
