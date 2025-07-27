@@ -1,13 +1,10 @@
 // /api/callback.js
-import fetch from 'node-fetch';
 
-const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
-const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
 export default async function handler(req, res) {
-  const { code, state } = req.query;
-  // hier kun je je state validatie toevoegen
-
+  const { code } = req.query;
   if (!code) return res.status(400).send('code ontbreekt');
 
   const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
@@ -19,15 +16,16 @@ export default async function handler(req, res) {
       code,
     }),
   });
+
   const tokenData = await tokenResponse.json();
   if (tokenData.error) return res.status(500).json(tokenData);
 
   const accessToken = tokenData.access_token;
 
-  // user info ophalen
   const userResponse = await fetch('https://api.github.com/user', {
     headers: { Authorization: `token ${accessToken}` },
   });
+
   const userData = await userResponse.json();
 
   res.status(200).json(userData);
