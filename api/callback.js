@@ -27,4 +27,4 @@ export default async function handler(req, res) {
   const userData = await userResponse.json();
 
   res.status(200).json({ user: userData, token: accessToken });
-}
+} 
