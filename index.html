@@ -3,23 +3,37 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Login met GitHub</title>
+<title>Login met GitHub & Repo Beheer</title>
 <style>
-  body { font-family: Arial, sans-serif; display: flex; height: 100vh; justify-content: center; align-items: center; background: #f4f4f4; }
-  button { padding: 12px 24px; font-size: 1.2rem; cursor: pointer; background-color: #24292e; color: white; border: none; border-radius: 6px; }
-  button:hover { background-color: #444c56; }
+  body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+  #login-btn { padding: 12px 24px; font-size: 1.2rem; cursor: pointer; background-color: #24292e; color: white; border: none; border-radius: 6px; }
+  #login-btn:hover { background-color: #444c56; }
+  #profile, #repos { margin-top: 20px; }
+  .repo { background: white; padding: 12px; margin-bottom: 10px; border-radius: 6px; }
+  input[type=text] { width: 70%; padding: 6px; margin-right: 8px; }
+  button.update-btn { padding: 6px 12px; cursor: pointer; }
 </style>
 </head>
 <body>
 
-<button id="github-login">Login met GitHub</button>
+<button id="login-btn">Login met GitHub</button>
+
+<div id="profile" style="display:none;">
+  <h2>Welkom, <span id="username"></span></h2>
+  <img id="avatar" src="" alt="Avatar" width="80" style="border-radius:50%;"/>
+</div>
+
+<div id="repos" style="display:none;">
+  <h3>Je repositories</h3>
+  <div id="repo-list"></div>
+</div>
 
 <script>
-  const CLIENT_ID = 'Ov23liDz6jVlxTriqeZ9';  // jouw GitHub Client ID
-  const REDIRECT_URI = 'https://ghauth.vercel.app/api/callback'; // je callback URL
+  const CLIENT_ID = 'Ov23liDz6jVlxTriqeZ9';
+  const REDIRECT_URI = window.location.origin + '/'; // naar dezelfde pagina terug
 
-  document.getElementById('github-login').addEventListener('click', () => {
-    const scope = 'repo user admin:repo_hook delete_repo user:email';
+  document.getElementById('login-btn').addEventListener('click', () => {
+    const scope = 'repo user';
     const url =
       `https://github.com/login/oauth/authorize` +
       `?client_id=${CLIENT_ID}` +
@@ -27,6 +41,86 @@
       `&scope=${encodeURIComponent(scope)}`;
     window.location.href = url;
   });
+
+  async function handleCallback() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (!code) return;
+
+    // Verberg login knop
+    document.getElementById('login-btn').style.display = 'none';
+
+    // Haal token en user info op via backend
+    const res = await fetch(`/api/callback?code=${code}`);
+    const data = await res.json();
+    if (!data.token) {
+      alert('Fout bij inloggen');
+      return;
+    }
+
+    const token = data.token;
+    const user = data.user;
+
+    // Toon profiel
+    document.getElementById('profile').style.display = 'block';
+    document.getElementById('username').textContent = user.login;
+    document.getElementById('avatar').src = user.avatar_url;
+
+    // Toon repos
+    document.getElementById('repos').style.display = 'block';
+
+    // Haal repos op
+    const repoRes = await fetch('https://api.github.com/user/repos', {
+      headers: { Authorization: `token ${token}` }
+    });
+    const repos = await repoRes.json();
+
+    const repoList = document.getElementById('repo-list');
+    repoList.innerHTML = '';
+
+    repos.forEach(repo => {
+      const div = document.createElement('div');
+      div.className = 'repo';
+      div.innerHTML = `
+        <strong>${repo.name}</strong><br/>
+        <form data-repo="${repo.name}">
+          Beschrijving: <input type="text" name="description" value="${repo.description || ''}" />
+          <button type="submit" class="update-btn">Update</button>
+          <span class="status"></span>
+        </form>
+      `;
+      repoList.appendChild(div);
+
+      const form = div.querySelector('form');
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const description = form.description.value;
+
+        const statusSpan = form.querySelector('.status');
+        statusSpan.textContent = 'Bezig...';
+
+        const patchRes = await fetch(`https://api.github.com/repos/${user.login}/${repo.name}`, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `token ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ description }),
+        });
+
+        if (patchRes.ok) {
+          statusSpan.textContent = 'Succes!';
+        } else {
+          const err = await patchRes.json();
+          statusSpan.textContent = `Fout: ${err.message}`;
+        }
+
+        setTimeout(() => { statusSpan.textContent = ''; }, 3000);
+      });
+    });
+  }
+
+  handleCallback();
 </script>
 
 </body>
