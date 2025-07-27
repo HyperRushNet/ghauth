@@ -1,7 +1,7 @@
 // /api/callback.js
 
-const CLIENT_ID = process.env.CLIENT_ID;
-const CLIENT_SECRET = process.env.CLIENT_SECRET;
+const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
+const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
 
 export default async function handler(req, res) {
   const { code } = req.query;
